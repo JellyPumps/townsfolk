@@ -1,5 +1,8 @@
 package com.bouncyjelly.townsfolk.entity;
 
+import com.bouncyjelly.townsfolk.Townsfolk;
+import com.bouncyjelly.townsfolk.citizen.Citizen;
+import com.bouncyjelly.townsfolk.citizen.CitizenManager;
 import com.bouncyjelly.townsfolk.entity.goal.CitizenOpenDoorGoal;
 import com.bouncyjelly.townsfolk.entity.goal.WalkToTargetGoal;
 import net.minecraft.entity.EntityType;
@@ -9,13 +12,20 @@ import net.minecraft.entity.attribute.DefaultAttributeContainer;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.mob.PathAwareEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.server.world.ServerWorld;
+import net.minecraft.text.Text;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.UUID;
+
 public class CitizenEntity extends PathAwareEntity {
     @Nullable
     private BlockPos walk_target;
+    @Nullable private UUID citizen_id;
+
 
     public CitizenEntity(EntityType<? extends PathAwareEntity> type, World world) {
         super(type, world);
@@ -47,4 +57,33 @@ public class CitizenEntity extends PathAwareEntity {
     public void setWalkTarget(@Nullable BlockPos pos) { this.walk_target = pos; }
     @Nullable
     public BlockPos getWalkTarget() { return this.walk_target; }
+    @Nullable public UUID getCitizenId() { return citizen_id; }
+
+    public void bindToCitizen(Citizen citizen) {
+        this.citizen_id = citizen.getId();
+        this.setCustomName(Text.literal(citizen.getName()));
+        this.setCustomNameVisible(true);
+    }
+
+    @Override
+    public void writeCustomDataToNbt(NbtCompound nbt) {
+        super.writeCustomDataToNbt(nbt);
+        if (citizen_id != null) nbt.putUuid("CitizenId", citizen_id);
+    }
+
+    @Override
+    public void readCustomDataFromNbt(NbtCompound nbt) {
+        super.readCustomDataFromNbt(nbt);
+        if (nbt.containsUuid("CitizenId")) citizen_id = nbt.getUuid("CitizenId");
+    }
+    @Override
+    public void tick() {
+        super.tick();
+        if (!getWorld().isClient && citizen_id != null && age == 20) {
+            if (CitizenManager.get((ServerWorld) getWorld()).getById(citizen_id) == null) {
+                Townsfolk.LOGGER.warn("Citizen entity {} has no record for id {}", getUuid(), citizen_id);
+            }
+        }
+    }
+
 }
