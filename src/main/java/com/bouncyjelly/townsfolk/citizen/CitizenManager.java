@@ -58,4 +58,34 @@ public class CitizenManager extends PersistentState {
         }
         return manager;
     }
+
+    @Nullable
+    public Citizen getByName(String name) {
+        for (Citizen c : citizens.values()) {
+            if (c.getName().equalsIgnoreCase(name)) return c;
+        }
+        return null;
+    }
+
+    public void assignHome(Citizen c, @Nullable String place_id) {
+        c.setHomeId(place_id);
+        markDirty();
+    }
+
+    public void assignWork(Citizen c, @Nullable String place_id) {
+        c.setWorkId(place_id);
+        markDirty();
+    }
+
+    public int clearPlaceReferences(String place_id) {
+        int count = 0;
+        for (Citizen c : citizens.values()) {
+            boolean changed = false;
+            if (place_id.equals(c.getHomeId())) { c.setHomeId(null); changed = true; }
+            if (place_id.equals(c.getWorkId())) { c.setWorkId(null); changed = true; }
+            if (changed) count++;
+        }
+        if (count > 0) markDirty();
+        return count;
+    }
 }
