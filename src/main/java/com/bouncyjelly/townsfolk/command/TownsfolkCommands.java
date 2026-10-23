@@ -2,6 +2,7 @@ package com.bouncyjelly.townsfolk.command;
 
 import com.bouncyjelly.townsfolk.citizen.Citizen;
 import com.bouncyjelly.townsfolk.citizen.CitizenManager;
+import com.bouncyjelly.townsfolk.entity.CitizenEntities;
 import com.bouncyjelly.townsfolk.entity.ModEntities;
 import com.bouncyjelly.townsfolk.place.Place;
 import com.bouncyjelly.townsfolk.place.PlaceRegistry;
@@ -9,6 +10,7 @@ import com.bouncyjelly.townsfolk.place.PlaceType;
 import com.mojang.brigadier.CommandDispatcher;
 import com.bouncyjelly.townsfolk.entity.CitizenEntity;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.suggestion.SuggestionProvider;
 import net.minecraft.command.CommandSource;
 import net.minecraft.command.argument.BlockPosArgumentType;
 import net.minecraft.server.command.CommandManager;
@@ -19,8 +21,16 @@ import net.minecraft.text.Text;
 import net.minecraft.util.math.BlockPos;
 
 import java.util.Comparator;
+import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 public class TownsfolkCommands {
+
+    static final SuggestionProvider<ServerCommandSource> CITIZEN_SUGGESTIONS = (ctx, b) ->
+            CommandSource.suggestMatching(
+                    CitizenManager.get(ctx.getSource().getWorld()).getAll().stream().map(Citizen::getName), b);
 
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
         dispatcher.register(CommandManager.literal("townsfolk")
@@ -53,6 +63,10 @@ public class TownsfolkCommands {
                                     ServerPlayerEntity player = src.getPlayerOrThrow();
                                     ServerWorld world = src.getWorld();
                                     String name = StringArgumentType.getString(ctx, "name");
+                                    if (CitizenManager.get(world).getByName(name) != null) {
+                                        src.sendError(Text.literal("A citizen called '" + name + "' already exists."));
+                                        return 0;
+                                    }
 
                                     CitizenEntity entity = ModEntities.CITIZEN.create(world);
                                     if (entity == null) {
@@ -67,20 +81,28 @@ public class TownsfolkCommands {
                                     src.sendFeedback(() -> Text.literal("Created citizen " + name), false);
                                     return 1;
                                 })))
-                .then(CommandManager.literal("list")
-                        .executes(ctx -> {
-                            ServerCommandSource src = ctx.getSource();
-                            var all = CitizenManager.get(src.getWorld()).getAll();
-                            if (all.isEmpty()) {
-                                src.sendFeedback(() -> Text.literal("No citizens."), false);
-                                return 0;
-                            }
-                            for (Citizen c : all) {
-                                src.sendFeedback(() -> Text.literal(c.getName()
-                                        + "  home=" + c.getHomeId() + "  work=" + c.getWorkId()), false);
-                            }
-                            return all.size();
-                        }))
+                .then(CommandManager.literal("list").executes(ctx -> {
+                    ServerCommandSource src = ctx.getSource();
+                        var all = CitizenManager.get(src.getWorld()).getAll();
+                        var loadedEntities = CitizenEntities.loaded(src.getServer());
+                        Set<UUID> loadedIds = loadedEntities.stream()
+                                .map(CitizenEntity::getCitizenId)
+                                .filter(Objects::nonNull)
+                                .collect(Collectors.toSet());
+                        long unlinked = loadedEntities.stream().filter(e -> e.getCitizenId() == null).count();
+
+                        src.sendFeedback(() -> Text.literal("Citizens: " + all.size()
+                                + "  (loaded entities: " + loadedEntities.size()
+                                + ", unlinked: " + unlinked + ")"), false);
+                        for (Citizen c : all) {
+                            src.sendFeedback(() -> Text.literal(c.getName()
+                                    + "  " + c.getId().toString().substring(0, 8)
+                                    + "  home=" + c.getHomeId()
+                                    + "  work=" + c.getWorkId()
+                                    + "  " + (loadedIds.contains(c.getId()) ? "loaded" : "unloaded")), false);
+                        }
+                        return all.size();
+                    }))
                 .then(CommandManager.literal("assign")
                         .then(CommandManager.argument("citizen", StringArgumentType.string())
                                 .suggests((ctx, b) -> CommandSource.suggestMatching(
@@ -125,6 +147,43 @@ public class TownsfolkCommands {
                                                             + " -> " + place.id()), false);
                                                     return 1;
                                                 })))))
+                .then(CommandManager.literal("remove")
+                        .then(CommandManager.argument("citizen", StringArgumentType.string())
+                                .suggests(CITIZEN_SUGGESTIONS)
+                                .executes(ctx -> {
+                                    ServerCommandSource src = ctx.getSource();
+                                    CitizenManager manager = CitizenManager.get(src.getWorld());
+                                    Citizen citizen = manager.getByName(StringArgumentType.getString(ctx, "citizen"));
+                                    if (citizen == null) {
+                                        src.sendError(Text.literal("No citizen with that name."));
+                                        return 0;
+                                    }
+                                    manager.remove(citizen.getId());
+                                    int entities = CitizenEntities.discardFor(src.getServer(), citizen.getId());
+                                    src.sendFeedback(() -> Text.literal("Removed " + citizen.getName()
+                                            + " (" + entities + " loaded entity removed)."), false);
+                                    return 1;
+                                })))
+                .then(CommandManager.literal("clear")
+                        .executes(ctx -> {
+                            ctx.getSource().sendFeedback(() -> Text.literal(
+                                    "This removes ALL citizens and citizen entities. Places are kept. "
+                                            + "Run '/townsfolk clear confirm' to proceed."), false);
+                            return 0;
+                        })
+                        .then(CommandManager.literal("confirm").executes(ctx -> {
+                            ServerCommandSource src = ctx.getSource();
+                            int records = CitizenManager.get(src.getWorld()).removeAll();
+                            int entities = 0;
+                            for (CitizenEntity e : CitizenEntities.loaded(src.getServer())) {
+                                e.discard();
+                                entities++;
+                            }
+                            int removedEntities = entities;
+                            src.sendFeedback(() -> Text.literal("Removed " + records + " citizen(s) and "
+                                    + removedEntities + " loaded entity(ies)."), false);
+                            return records;
+                        })))
                 .then(PlaceCommands.build()));
     }
 }

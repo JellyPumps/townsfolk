@@ -49,14 +49,23 @@ public class CitizenEntity extends PathAwareEntity {
         this.goalSelector.add(1, new CitizenOpenDoorGoal(this, true));
     }
 
+    private void checkOrphan(ServerWorld world) {
+        CitizenManager manager = CitizenManager.get(world);
+        if (manager.getById(citizen_id) == null && !manager.hasLoadFailed()) {
+            Townsfolk.LOGGER.info("Removing orphaned citizen entity {}", getUuid());
+            discard();
+        }
+    }
+
     @Override
     public boolean isPushable() { return false; }
+
     @Override
     protected void tickCramming() {}
-
     public void setWalkTarget(@Nullable BlockPos pos) { this.walk_target = pos; }
     @Nullable
     public BlockPos getWalkTarget() { return this.walk_target; }
+
     @Nullable public UUID getCitizenId() { return citizen_id; }
 
     public void bindToCitizen(Citizen citizen) {
@@ -70,20 +79,17 @@ public class CitizenEntity extends PathAwareEntity {
         super.writeCustomDataToNbt(nbt);
         if (citizen_id != null) nbt.putUuid("CitizenId", citizen_id);
     }
-
     @Override
     public void readCustomDataFromNbt(NbtCompound nbt) {
         super.readCustomDataFromNbt(nbt);
         if (nbt.containsUuid("CitizenId")) citizen_id = nbt.getUuid("CitizenId");
     }
+
     @Override
     public void tick() {
         super.tick();
-        if (!getWorld().isClient && citizen_id != null && age == 20) {
-            if (CitizenManager.get((ServerWorld) getWorld()).getById(citizen_id) == null) {
-                Townsfolk.LOGGER.warn("Citizen entity {} has no record for id {}", getUuid(), citizen_id);
-            }
-        }
+        if (!(getWorld() instanceof ServerWorld serverWorld)) return;
+        if (citizen_id != null && age == 20) checkOrphan(serverWorld);
     }
 
 }

@@ -16,6 +16,7 @@ public class CitizenManager extends PersistentState {
 
     private static final Codec<List<Citizen>> LIST_CODEC = Citizen.CODEC.listOf();
     private static final String KEY = "citizens";
+    private boolean load_failed;
 
     private static final PersistentState.Type<CitizenManager> TYPE =
             new PersistentState.Type<>(CitizenManager::new, CitizenManager::fromNbt, null);
@@ -53,7 +54,10 @@ public class CitizenManager extends PersistentState {
         NbtElement list = nbt.get(KEY);
         if (list != null) {
             LIST_CODEC.parse(NbtOps.INSTANCE, list)
-                    .resultOrPartial(err -> Townsfolk.LOGGER.error("Failed to load citizens: {}", err))
+                    .resultOrPartial(err -> {
+                        Townsfolk.LOGGER.error("Failed to load citizens: {}", err);
+                        manager.load_failed = true;
+                    })
                     .ifPresent(loaded -> loaded.forEach(c -> manager.citizens.put(c.getId(), c)));
         }
         return manager;
@@ -87,5 +91,23 @@ public class CitizenManager extends PersistentState {
         }
         if (count > 0) markDirty();
         return count;
+    }
+
+    public boolean hasLoadFailed() { return load_failed; }
+
+    @Nullable
+    public Citizen remove(UUID id) {
+        Citizen removed = citizens.remove(id);
+        if (removed != null) markDirty();
+        return removed;
+    }
+
+    public int removeAll() {
+        int n = citizens.size();
+        if (n > 0) {
+            citizens.clear();
+            markDirty();
+        }
+        return n;
     }
 }
