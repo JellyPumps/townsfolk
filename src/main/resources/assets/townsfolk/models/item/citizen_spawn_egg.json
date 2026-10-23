@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:item/generated",
   "textures": {
-    "layer0": "townsfolk:citizen_spawn_egg"
+    "layer0": "townsfolk:item/citizen_spawn_egg"
   }
 }
