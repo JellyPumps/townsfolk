@@ -1,0 +1,41 @@
+{
+	"schemaVersion": 1,
+	"id": "townsfolk",
+	"version": "${version}",
+	"name": "Townsfolk",
+	"description": "Townsfolk adds citizens with homes, jobs and daily schedules to Fabric 1.21.1, for builders who want their cities to have people in them.",
+	"authors": [
+		"BouncyJelly"
+	],
+	"contact": {
+		"homepage": "https://bouncyjelly.com/minecraft/townsfolk",
+		"sources": "https://github.com/JellyPumps/townsfolk"
+	},
+	"license": "GPLv3",
+	"icon": "assets/townsfolk/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.bouncyjelly.townsfolk.Townsfolk"
+		],
+		"client": [
+			"com.bouncyjelly.townsfolk.client.TownsfolkClient"
+		],
+		"fabric-datagen": [
+			"com.bouncyjelly.townsfolk.client.TownsfolkDataGenerator"
+		]
+	},
+	"mixins": [
+		"townsfolk.mixins.json",
+		{
+			"config": "townsfolk.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~1.21.1",
+		"java": ">=21",
+		"fabric-api": "*"
+	}
+}
