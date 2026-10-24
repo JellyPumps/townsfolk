@@ -210,6 +210,26 @@ public class TownsfolkCommands {
                                     }
                                     return 1;
                                 })))
+                .then(CommandManager.literal("status")
+                        .then(CommandManager.argument("citizen", StringArgumentType.string())
+                                .suggests(CITIZEN_SUGGESTIONS)
+                                .executes(ctx -> {
+                                    ServerCommandSource src = ctx.getSource();
+                                    Citizen citizen = CitizenManager.get(src.getWorld())
+                                            .getByName(StringArgumentType.getString(ctx, "citizen"));
+                                    if (citizen == null) {
+                                        src.sendError(Text.literal("No citizen with that name."));
+                                        return 0;
+                                    }
+                                    for (CitizenEntity e : CitizenEntities.loaded(src.getServer())) {
+                                        if (citizen.getId().equals(e.getCitizenId())) {
+                                            src.sendFeedback(() -> Text.literal(citizen.getName() + ": " + e.describeState()), false);
+                                            return 1;
+                                        }
+                                    }
+                                    src.sendError(Text.literal(citizen.getName() + " is not loaded."));
+                                    return 0;
+                                })))
                 .then(PlaceCommands.build()));
     }
 }
