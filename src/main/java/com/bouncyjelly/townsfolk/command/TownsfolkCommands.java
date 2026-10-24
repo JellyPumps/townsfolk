@@ -4,6 +4,7 @@ import com.bouncyjelly.townsfolk.citizen.Citizen;
 import com.bouncyjelly.townsfolk.citizen.CitizenManager;
 import com.bouncyjelly.townsfolk.entity.CitizenEntities;
 import com.bouncyjelly.townsfolk.entity.ModEntities;
+import com.bouncyjelly.townsfolk.path.Walkability;
 import com.bouncyjelly.townsfolk.place.Place;
 import com.bouncyjelly.townsfolk.place.PlaceRegistry;
 import com.bouncyjelly.townsfolk.place.PlaceType;
@@ -12,13 +13,17 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.bouncyjelly.townsfolk.entity.CitizenEntity;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
+import net.minecraft.block.BlockState;
 import net.minecraft.command.CommandSource;
 import net.minecraft.command.argument.BlockPosArgumentType;
+import net.minecraft.registry.Registries;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.Text;
+import net.minecraft.util.hit.BlockHitResult;
+import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
 
 import java.util.Comparator;
@@ -230,6 +235,26 @@ public class TownsfolkCommands {
                                     src.sendError(Text.literal(citizen.getName() + " is not loaded."));
                                     return 0;
                                 })))
+                .then(CommandManager.literal("probe").executes(ctx -> {
+                    ServerCommandSource src = ctx.getSource();
+                    ServerPlayerEntity player = src.getPlayerOrThrow();
+                    ServerWorld world = src.getWorld();
+
+                    HitResult hit = player.raycast(8.0, 0.0f, false);
+                    if (!(hit instanceof BlockHitResult bhr) || hit.getType() != HitResult.Type.BLOCK) {
+                        src.sendError(Text.literal("Look at a block."));
+                        return 0;
+                    }
+                    BlockPos pos = bhr.getBlockPos();
+                    BlockState state = world.getBlockState(pos);
+                    String msg = Registries.BLOCK.getId(state.getBlock())
+                            + ": as body space=" + Walkability.space(world, pos)
+                            + ", as floor=" + Walkability.supports(world, pos)
+                            + ", standing on top=" + Walkability.standable(world, pos.up())
+                            + ", avoid tag=" + state.isIn(Walkability.AVOID);
+                    src.sendFeedback(() -> Text.literal(msg), false);
+                    return 1;
+                }))
                 .then(PlaceCommands.build()));
     }
 }
