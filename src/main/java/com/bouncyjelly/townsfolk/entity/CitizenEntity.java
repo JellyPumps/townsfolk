@@ -7,6 +7,7 @@ import com.bouncyjelly.townsfolk.citizen.NameGenerator;
 import com.bouncyjelly.townsfolk.entity.goal.CitizenOpenDoorGoal;
 import com.bouncyjelly.townsfolk.entity.goal.WalkToTargetGoal;
 import com.bouncyjelly.townsfolk.entity.goal.WanderNearAnchorGoal;
+import com.bouncyjelly.townsfolk.path.CitizenNavigator;
 import com.bouncyjelly.townsfolk.place.Place;
 import com.bouncyjelly.townsfolk.place.PlaceType;
 import com.bouncyjelly.townsfolk.schedule.Activity;
@@ -43,6 +44,9 @@ public class CitizenEntity extends PathAwareEntity {
     private String scheduled_key = "";
     @Nullable private BlockPos bed_pos;
     private int bed_search_cooldown;
+    private final CitizenNavigator navigator = new CitizenNavigator(this);
+
+    public CitizenNavigator navigator() { return navigator; }
 
     public CitizenEntity(EntityType<? extends PathAwareEntity> type, World world) {
         super(type, world);
