@@ -1,3 +1,4 @@
 {
-  "item.townsfolk.citizen_spawn_egg" : "Citizen Spawn Egg"
+  "item.townsfolk.citizen_spawn_egg" : "Citizen Spawn Egg",
+  "item.townsfolk.citizen_config" : "Citizen Config"
 }

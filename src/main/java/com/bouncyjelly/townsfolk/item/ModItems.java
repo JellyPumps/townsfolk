@@ -15,10 +15,16 @@ public class ModItems {
             Registries.ITEM,
             Identifier.of(Townsfolk.MOD_ID, "citizen_spawn_egg"),
             new SpawnEggItem(ModEntities.CITIZEN, 0x6B8E9F, 0xD9C8A9, new Item.Settings()));
+    public static final Item CITIZEN_CONFIG = Registry.register(
+            Registries.ITEM,
+            Identifier.of(Townsfolk.MOD_ID, "citizen_config"),
+            new CitizenConfigItem(new Item.Settings().maxCount(1)));
 
     public static void register() {
         ItemGroupEvents.modifyEntriesEvent(ItemGroups.SPAWN_EGGS).register(entries -> {
             entries.add(CITIZEN_SPAWN_EGG);
         });
+        ItemGroupEvents.modifyEntriesEvent(ItemGroups.TOOLS)
+                .register(entries -> entries.add(CITIZEN_CONFIG));
     }
 }

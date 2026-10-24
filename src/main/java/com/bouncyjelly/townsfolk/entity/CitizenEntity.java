@@ -3,6 +3,7 @@ package com.bouncyjelly.townsfolk.entity;
 import com.bouncyjelly.townsfolk.Townsfolk;
 import com.bouncyjelly.townsfolk.citizen.Citizen;
 import com.bouncyjelly.townsfolk.citizen.CitizenManager;
+import com.bouncyjelly.townsfolk.citizen.NameGenerator;
 import com.bouncyjelly.townsfolk.entity.goal.CitizenOpenDoorGoal;
 import com.bouncyjelly.townsfolk.entity.goal.WalkToTargetGoal;
 import com.bouncyjelly.townsfolk.place.Place;
@@ -93,9 +94,19 @@ public class CitizenEntity extends PathAwareEntity {
     public void tick() {
         super.tick();
         if (!(getWorld() instanceof ServerWorld serverWorld)) return;
-        if (citizen_id != null && age == 20) checkOrphan(serverWorld);
+        if (age == 20) {
+            if (citizen_id == null) adoptNewRecord(serverWorld);
+            else checkOrphan(serverWorld);
+        }
         tickSchedule(serverWorld);
     }
+
+    private void adoptNewRecord(ServerWorld world) {
+        CitizenManager manager = CitizenManager.get(world);
+        Citizen citizen = manager.create(NameGenerator.pick(manager, world.getRandom()));
+        bindToCitizen(citizen);
+    }
+
     private void tickSchedule(ServerWorld world) {
         if (citizen_id == null || (age + getId()) % 20 != 0) return; // staggered, once a second
         Citizen citizen = CitizenManager.get(world).getById(citizen_id);

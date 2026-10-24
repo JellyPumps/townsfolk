@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft/generated",
+  "textures": {
+    "layer0": "townsfolk:item/citizen_config"
+  }
+}
