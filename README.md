@@ -4,25 +4,35 @@ Townsfolk is a Fabric mod for Minecraft 1.21.1 that adds citizens to your world.
 
 I'm building it for my own multi-city world, after not finding any NPC mod that would give me the features I wanted. It isn't a settlement or colony mod. Citizens never place or break blocks.
 
-## Status
-
-Early development. The roadmap below shows what is done and what isn't. I'll update it on the go.
-
 This is a hobby project, so progress may not be consistent as other things take priority.
 
-## Planned features
+## Features (Implemented & Planned)
 
-- Citizens with a home, a workplace and a schedule tied to the in-game clock
-- Road and sidewalk navigation using a waypoint graph that you place by hand
-- Shops, with shopkeepers you can trade with
-- Crossings where pedestrians wait for traffic
-- Optional Minecraft Transit Railway support
-- A cheap simulation for citizens that are far from every player
+- Simulate working towns and cities that feel alive
+- Citizens wander in their free time like real people: some stay in, some
+  exercise outside, shop for groceries, or hang out with friends and family
+- Family mechanic and multiple age groups
+- Schools and third places (cafes, restaurants, pubs, parks) for socialising
+- Social circles and gossip
+- Shopkeepers who trade with players and with other NPCs
+- NPCs use Minecraft Transit Railway (MTR) for public transport
+- NPCs wait for roads to be clear before crossing
+- Personalities that shape how a citizen spends the day
+- A config item and custom GUI to edit a citizen (name, personality,
+  schedule, and later age, household and relationships)
+- Possible later: my own vehicles mod, with NPC truckers and farmers
 
-## Roadmap
+## Roadmap ( Not Ordered )
 
-- [ ] Homes, workplaces and a place registry
-- [ ] Time-of-day schedules
+- [X] Homes, workplaces and a place registry
+- [X] Time-of-day schedules
+- [ ] Free time and wandering
+- [ ] Age groups
+- [ ] Families
+- [ ] Schools
+- [ ] Third places
+- [ ] Social circles
+- [ ] Gossip
 - [ ] Waypoint navigation
 - [ ] Near and far simulation
 - [ ] Crossings
