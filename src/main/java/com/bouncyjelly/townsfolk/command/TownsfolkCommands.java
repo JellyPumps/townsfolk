@@ -4,6 +4,7 @@ import com.bouncyjelly.townsfolk.citizen.Citizen;
 import com.bouncyjelly.townsfolk.citizen.CitizenManager;
 import com.bouncyjelly.townsfolk.entity.CitizenEntities;
 import com.bouncyjelly.townsfolk.entity.ModEntities;
+import com.bouncyjelly.townsfolk.path.CityPathfinder;
 import com.bouncyjelly.townsfolk.path.Walkability;
 import com.bouncyjelly.townsfolk.place.Place;
 import com.bouncyjelly.townsfolk.place.PlaceRegistry;
@@ -16,6 +17,7 @@ import com.mojang.brigadier.suggestion.SuggestionProvider;
 import net.minecraft.block.BlockState;
 import net.minecraft.command.CommandSource;
 import net.minecraft.command.argument.BlockPosArgumentType;
+import net.minecraft.particle.ParticleTypes;
 import net.minecraft.registry.Registries;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
@@ -255,6 +257,45 @@ public class TownsfolkCommands {
                     src.sendFeedback(() -> Text.literal(msg), false);
                     return 1;
                 }))
+                .then(CommandManager.literal("path")
+                        .then(CommandManager.argument("citizen", StringArgumentType.string())
+                                .suggests(CITIZEN_SUGGESTIONS)
+                                .then(CommandManager.argument("pos", BlockPosArgumentType.blockPos())
+                                        .executes(ctx -> {
+                                            ServerCommandSource src = ctx.getSource();
+                                            ServerWorld world = src.getWorld();
+                                            Citizen citizen = CitizenManager.get(world)
+                                                    .getByName(StringArgumentType.getString(ctx, "citizen"));
+                                            BlockPos target = BlockPosArgumentType.getBlockPos(ctx, "pos");
+                                            if (citizen == null) {
+                                                src.sendError(Text.literal("No citizen with that name."));
+                                                return 0;
+                                            }
+                                            for (CitizenEntity e : CitizenEntities.loaded(src.getServer())) {
+                                                if (!citizen.getId().equals(e.getCitizenId())) continue;
+
+                                                CityPathfinder.Result r = CityPathfinder.find(world, e.getBlockPos(), target, 6000);
+                                                double ms = r.micros() / 1000.0;
+                                                if (!r.found()) {
+                                                    src.sendFeedback(() -> Text.literal(String.format(
+                                                            "No path: %s (expanded %d nodes, %.1f ms)", r.note(), r.expanded(), ms)), false);
+                                                    return 0;
+                                                }
+                                                for (CityPathfinder.Step s : r.steps()) {
+                                                    world.spawnParticles(ParticleTypes.END_ROD,
+                                                            s.pos().getX() + 0.5, s.pos().getY() + 0.5, s.pos().getZ() + 0.5,
+                                                            1, 0, 0, 0, 0);
+                                                }
+                                                var counts = r.steps().stream().collect(
+                                                        Collectors.groupingBy(CityPathfinder.Step::move, Collectors.counting()));
+                                                src.sendFeedback(() -> Text.literal(String.format(
+                                                        "Path: %d steps, expanded %d nodes, %.1f ms, moves %s",
+                                                        r.steps().size(), r.expanded(), ms, counts)), false);
+                                                return 1;
+                                            }
+                                            src.sendError(Text.literal(citizen.getName() + " is not loaded."));
+                                            return 0;
+                                        }))))
                 .then(PlaceCommands.build()));
     }
 }
