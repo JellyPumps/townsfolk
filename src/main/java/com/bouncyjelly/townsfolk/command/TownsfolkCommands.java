@@ -7,6 +7,7 @@ import com.bouncyjelly.townsfolk.entity.ModEntities;
 import com.bouncyjelly.townsfolk.place.Place;
 import com.bouncyjelly.townsfolk.place.PlaceRegistry;
 import com.bouncyjelly.townsfolk.place.PlaceType;
+import com.bouncyjelly.townsfolk.schedule.ScheduleResolver;
 import com.mojang.brigadier.CommandDispatcher;
 import com.bouncyjelly.townsfolk.entity.CitizenEntity;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -184,6 +185,31 @@ public class TownsfolkCommands {
                                     + removedEntities + " loaded entity(ies)."), false);
                             return records;
                         })))
+                .then(CommandManager.literal("schedule")
+                        .then(CommandManager.argument("citizen", StringArgumentType.string())
+                                .suggests(CITIZEN_SUGGESTIONS)
+                                .executes(ctx -> {
+                                    ServerCommandSource src = ctx.getSource();
+                                    ServerWorld world = src.getWorld();
+                                    Citizen citizen = CitizenManager.get(world)
+                                            .getByName(StringArgumentType.getString(ctx, "citizen"));
+                                    if (citizen == null) {
+                                        src.sendError(Text.literal("No citizen with that name."));
+                                        return 0;
+                                    }
+                                    long tick = world.getTimeOfDay() % 24000L;
+                                    ScheduleResolver.Destination d = ScheduleResolver.resolve(world, citizen);
+                                    if (d == null) {
+                                        src.sendFeedback(() -> Text.literal("Tick " + tick + ": no schedule entry, stays put."), false);
+                                    } else if (d.place() == null) {
+                                        src.sendFeedback(() -> Text.literal("Tick " + tick + ": " + d.activity().asString()
+                                                + ", but no place is available."), false);
+                                    } else {
+                                        src.sendFeedback(() -> Text.literal("Tick " + tick + ": " + d.activity().asString()
+                                                + " at " + d.place().id() + " " + d.place().pos().toShortString()), false);
+                                    }
+                                    return 1;
+                                })))
                 .then(PlaceCommands.build()));
     }
 }

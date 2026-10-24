@@ -5,6 +5,8 @@ import com.bouncyjelly.townsfolk.citizen.Citizen;
 import com.bouncyjelly.townsfolk.citizen.CitizenManager;
 import com.bouncyjelly.townsfolk.entity.goal.CitizenOpenDoorGoal;
 import com.bouncyjelly.townsfolk.entity.goal.WalkToTargetGoal;
+import com.bouncyjelly.townsfolk.place.Place;
+import com.bouncyjelly.townsfolk.schedule.ScheduleResolver;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.ai.goal.LookAroundGoal;
 import net.minecraft.entity.ai.goal.LookAtEntityGoal;
@@ -25,7 +27,8 @@ public class CitizenEntity extends PathAwareEntity {
     @Nullable
     private BlockPos walk_target;
     @Nullable private UUID citizen_id;
-
+    @Nullable private String scheduled_place_id;
+    private int schedule_retries;
 
     public CitizenEntity(EntityType<? extends PathAwareEntity> type, World world) {
         super(type, world);
@@ -37,7 +40,8 @@ public class CitizenEntity extends PathAwareEntity {
     public static DefaultAttributeContainer.Builder createCitizenAttributes() {
         return PathAwareEntity.createMobAttributes()
                 .add(EntityAttributes.GENERIC_MAX_HEALTH, 20.0)
-                .add(EntityAttributes.GENERIC_MOVEMENT_SPEED, 0.25);
+                .add(EntityAttributes.GENERIC_MOVEMENT_SPEED, 0.25)
+                .add(EntityAttributes.GENERIC_FOLLOW_RANGE, 48.0);
     }
 
     @Override
@@ -77,12 +81,12 @@ public class CitizenEntity extends PathAwareEntity {
     @Override
     public void writeCustomDataToNbt(NbtCompound nbt) {
         super.writeCustomDataToNbt(nbt);
-        if (citizen_id != null) nbt.putUuid("CitizenId", citizen_id);
+        if (citizen_id != null) nbt.putUuid("citizen_id", citizen_id);
     }
     @Override
     public void readCustomDataFromNbt(NbtCompound nbt) {
         super.readCustomDataFromNbt(nbt);
-        if (nbt.containsUuid("CitizenId")) citizen_id = nbt.getUuid("CitizenId");
+        if (nbt.containsUuid("citizen_id")) citizen_id = nbt.getUuid("citizen_id");
     }
 
     @Override
@@ -90,6 +94,32 @@ public class CitizenEntity extends PathAwareEntity {
         super.tick();
         if (!(getWorld() instanceof ServerWorld serverWorld)) return;
         if (citizen_id != null && age == 20) checkOrphan(serverWorld);
+        tickSchedule(serverWorld);
     }
+    private void tickSchedule(ServerWorld world) {
+        if (citizen_id == null || (age + getId()) % 20 != 0) return; // staggered, once a second
+        Citizen citizen = CitizenManager.get(world).getById(citizen_id);
+        if (citizen == null) return;
 
+        ScheduleResolver.Destination dest = ScheduleResolver.resolve(world, citizen);
+        if (dest == null || dest.place() == null) return;
+        Place place = dest.place();
+
+        boolean changed = !place.id().equals(scheduled_place_id);
+        if (changed) {
+            scheduled_place_id = place.id();
+            schedule_retries = 0;
+        }
+
+        if (getBlockPos().getSquaredDistance(place.pos()) <= 9.0) { // within 3 blocks
+            schedule_retries = 0;
+            return;
+        }
+
+        boolean idle = walk_target == null && getNavigation().isIdle();
+        if (changed || (idle && schedule_retries < 3)) {
+            if (!changed) schedule_retries++;
+            setWalkTarget(place.pos());
+        }
+    }
 }
