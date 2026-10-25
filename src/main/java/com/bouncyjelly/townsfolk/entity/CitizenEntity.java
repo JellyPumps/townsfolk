@@ -169,6 +169,7 @@ public class CitizenEntity extends PathAwareEntity {
             if (citizen_id == null) adoptNewRecord(serverWorld);
             else checkOrphan(serverWorld);
         }
+        navigator.tick();
         tickSchedule(serverWorld);
     }
 
