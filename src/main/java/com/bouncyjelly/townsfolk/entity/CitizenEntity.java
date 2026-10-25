@@ -52,7 +52,7 @@ public class CitizenEntity extends PathAwareEntity {
         super(type, world);
         this.setPersistent();
         this.setInvulnerable(true);
-        ((net.minecraft.entity.ai.pathing.MobNavigation) this.getNavigation()).setCanPathThroughDoors(true);
+        // should no longer need a condition set to path through interactables (doors, trapdoors etc).
     }
 
     public static DefaultAttributeContainer.Builder createCitizenAttributes() {
@@ -68,7 +68,7 @@ public class CitizenEntity extends PathAwareEntity {
         this.goalSelector.add(6, new WanderNearAnchorGoal(this, 0.8));
         this.goalSelector.add(8, new LookAtEntityGoal(this, PlayerEntity.class, 6.0f));
         this.goalSelector.add(9, new LookAroundGoal(this));
-        this.goalSelector.add(1, new CitizenOpenDoorGoal(this, true));
+        // should no longer need a separate goal for interactables.
     }
 
     private void checkOrphan(ServerWorld world) {
@@ -139,7 +139,7 @@ public class CitizenEntity extends PathAwareEntity {
             bed_pos = null;
             return;
         }
-        getNavigation().stop();
+        navigator.stop();
         setWalkTarget(null);
         sleep(bed_pos);
         setCustomNameVisible(false);
@@ -230,7 +230,7 @@ public class CitizenEntity extends PathAwareEntity {
         }
 
         // placeholder animation
-        if (activity == Activity.WORK && in_zone && getNavigation().isIdle()
+        if (activity == Activity.WORK && in_zone && navigator.isIdle()
                 && getRandom().nextInt(4) == 0) {
             swingHand(Hand.MAIN_HAND);
         }
@@ -240,7 +240,7 @@ public class CitizenEntity extends PathAwareEntity {
             return;
         }
 
-        boolean idle = walk_target == null && getNavigation().isIdle();
+        boolean idle = walk_target == null && navigator.isIdle();
         if (changed || (idle && schedule_retries < 3)) {
             if (!changed) schedule_retries++;
             setWalkTarget(target);
