@@ -1,8 +1,12 @@
 package com.bouncyjelly.townsfolk.item;
 
 import com.bouncyjelly.townsfolk.citizen.Citizen;
+import com.bouncyjelly.townsfolk.citizen.CitizenConfigData;
 import com.bouncyjelly.townsfolk.citizen.CitizenManager;
+import com.bouncyjelly.townsfolk.config.ConfigService;
 import com.bouncyjelly.townsfolk.entity.CitizenEntity;
+import com.bouncyjelly.townsfolk.network.OpenConfigPayload;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Item;
@@ -47,8 +51,9 @@ public class CitizenConfigItem extends Item {
             return ActionResult.FAIL;
         }
 
-        // temporary, replaced in step 3
-        player.sendMessage(Text.literal("Citizen: " + record.getName()), false);
+        ServerPlayNetworking.send(player, new OpenConfigPayload(
+                citizenEntity.getId(), CitizenConfigData.from(record),
+                ConfigService.buildContext(player.getServerWorld(), citizenEntity)));
         return ActionResult.SUCCESS;
     }
 }
