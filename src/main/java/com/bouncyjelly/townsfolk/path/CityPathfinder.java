@@ -63,7 +63,7 @@ public class CityPathfinder {
         out.clear();
         var blocked = Walkability.Space.BLOCKED;
 
-        for (Direction d :  Direction.Type.HORIZONTAL) {
+        for (Direction d : Direction.Type.HORIZONTAL) {
             BlockPos n = p.offset(d);
 
             if (Walkability.standable(world, n)) {
@@ -71,10 +71,16 @@ public class CityPathfinder {
                 continue;
             }
 
+            BlockPos up = n.up();
+            if (Walkability.space(world, p.up(2)) != blocked && Walkability.standable(world, up)) {
+                out.add(new Edge(up, Move.STEP_UP, 1.6 + Walkability.extraCost(world, up)));
+                continue;
+            }
+
             if (Walkability.space(world, n) != blocked && Walkability.space(world, n.up()) != blocked) {
                 for (int drop = 1; drop <= MAX_DROP; drop++) {
                     BlockPos m = n.down(drop);
-                    if (Walkability.standable(world, n)) {
+                    if (Walkability.standable(world, m)) {
                         out.add(new Edge(m, Move.DROP, 1.0 + 0.6 * drop));
                         break;
                     }
@@ -88,7 +94,6 @@ public class CityPathfinder {
                 BlockPos na = p.offset(a);
                 BlockPos nb = p.offset(b);
                 BlockPos diag = na.offset(b);
-
                 if (cleanWalk(world, na) && cleanWalk(world, nb) && cleanWalk(world, diag)) {
                     out.add(new Edge(diag, Move.DIAGONAL, 1.45));
                 }
@@ -97,9 +102,13 @@ public class CityPathfinder {
 
         BlockPos above = p.up();
         if (Walkability.isClimbable(world, p) && Walkability.isClimbable(world, above)
-            && Walkability.space(world, above) != blocked
-            && Walkability.space(world, above.up()) != blocked ) {
+                && Walkability.space(world, above) != blocked
+                && Walkability.space(world, above.up()) != blocked) {
             out.add(new Edge(above, Move.CLIMB_UP, 1.3));
+        }
+        BlockPos below = p.down();
+        if (Walkability.isClimbable(world, below) && Walkability.space(world, below) != blocked) {
+            out.add(new Edge(below, Move.CLIMB_DOWN, 1.0));
         }
     }
 
