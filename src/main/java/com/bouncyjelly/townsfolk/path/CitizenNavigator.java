@@ -30,6 +30,16 @@ public class CitizenNavigator {
     private int stuck_checks;
     @Nullable private Vec3d last_pos;
     private String last_failure = "";
+    private int activeTicks;
+
+    public String describe() {
+        if (steps == null) {
+            return "idle" + (last_failure.isEmpty() ? "" : " (last failure: " + last_failure + ")");
+        }
+        return "step " + index + "/" + steps.size() + " -> "
+                + steps.get(Math.min(index, steps.size() - 1)).pos().toShortString()
+                + ", activeTicks=" + activeTicks;
+    }
 
     public boolean isIdle() { return steps == null; }
     public String lastFailure() { return last_failure; }

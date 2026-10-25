@@ -154,9 +154,11 @@ public class CitizenEntity extends PathAwareEntity {
         return "activity=" + (current_activity == null ? "none" : current_activity.asString())
                 + " anchor=" + (anchor == null ? "none" : anchor.toShortString())
                 + " wander=" + wander_radius
-                + " inZone=" + in_zone
+                + " in_zone=" + in_zone
                 + " sleeping=" + isSleeping()
-                + " bed=" + (bed_pos == null ? "none" : bed_pos.toShortString());
+                + " bed=" + (bed_pos == null ? "none" : bed_pos.toShortString())
+                + " walk_target=" + (walk_target == null ? "none" : walk_target.toShortString())
+                + " nav=" + navigator.describe();
     }
 
     @Override
