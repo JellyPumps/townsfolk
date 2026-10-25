@@ -26,7 +26,10 @@ This is a hobby project, so progress may not be consistent as other things take 
 
 - [X] Homes, workplaces and a place registry
 - [X] Time-of-day schedules
-- [ ] Free time and wandering
+- [X] Free time and wandering
+- [X] Custom A* Pathfinding
+- [ ] Skin support
+- [ ] Ease of use through GUI instead of commands
 - [ ] Age groups
 - [ ] Families
 - [ ] Schools
