@@ -18,7 +18,11 @@ public final class ScheduleResolver {
     /** @return null if the schedule has a gap right now */
     @Nullable
     public static Destination resolve(ServerWorld world, Citizen citizen) {
-        ScheduleEntry entry = ScheduleLoader.current().at(world.getTimeOfDay());
+        Schedule schedule = citizen.getScheduleOverride() != null
+                ? citizen.getScheduleOverride()
+                : ScheduleLoader.current();
+        ScheduleEntry entry = schedule.at(world.getTimeOfDay());
+        if (entry == null) return null;
         if (entry == null) return null;
 
         PlaceRegistry places = PlaceRegistry.get(world);

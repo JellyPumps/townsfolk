@@ -81,6 +81,93 @@ public class CitizenConfigScreen extends Screen {
             rows.add(new Row(ClockTime.format(e.start()), ClockTime.format(e.end()), e.activity()));
         }
     }
+    private void initPlaces(int x, int y) {
+        List<String> homes = new ArrayList<>(List.of(""));
+        homes.addAll(context.homeIds());
+        addDrawableChild(cycle("Home", homes, home_id, x, y, v -> home_id = v));
+
+        List<String> works = new ArrayList<>(List.of(""));
+        works.addAll(context.workIds());
+        addDrawableChild(cycle("Work", works, work_id, x, y + 24, v -> work_id = v));
+    }
+
+    private void initPersonality(int x, int y) {
+        List<String> options = new ArrayList<>(List.of(""));
+        options.addAll(ConfigOptions.PERSONALITIES);
+        addDrawableChild(cycle("Personality", options, personality, x, y, v -> personality = v));
+    }
+
+    private void initPlanned(int x, int y, ConfigOptions.Tab t) {
+        for (ConfigOptions.PlannedField f : ConfigOptions.PLANNED) {
+            if (f.tab() != t) continue;
+            if (f.isChoice()) {
+                String current = settings.getOrDefault(f.key(), f.options().get(0));
+                addDrawableChild(cycle(f.label(), f.options(), current, x, y, v -> settings.put(f.key(), v)));
+                y += 24;
+            } else {
+                y = textField(f.label(), x, y, settings.getOrDefault(f.key(), ""), 24, "[A-Za-z0-9 _'-]*",
+                        s -> { if (s.isBlank()) settings.remove(f.key()); else settings.put(f.key(), s.trim()); });
+            }
+        }
+    }
+
+    private void initSchedule(int x, int y) {
+        if (!customSchedule) {
+            addDrawableChild(ButtonWidget.builder(Text.literal("Customize schedule"), b -> {
+                loadRows(context.defaultSchedule());
+                customSchedule = true;
+                clearAndInit();
+            }).dimensions(x, y, FIELD_W, 20).build());
+            return;
+        }
+
+        labels.add(new LabelAt("Start", x, y - 12));
+        labels.add(new LabelAt("End", x + 54, y - 12));
+        labels.add(new LabelAt("Activity", x + 108, y - 12));
+
+        for (int i = 0; i < rows.size(); i++) {
+            final int index = i;
+            Row row = rows.get(i);
+            int ry = y + i * 22;
+
+            TextFieldWidget start = new TextFieldWidget(textRenderer, x, ry, 50, 20, Text.literal("Start"));
+            start.setMaxLength(5);
+            start.setText(row.start);
+            start.setChangedListener(s -> row.start = s);
+            addDrawableChild(start);
+
+            TextFieldWidget end = new TextFieldWidget(textRenderer, x + 54, ry, 50, 20, Text.literal("End"));
+            end.setMaxLength(5);
+            end.setText(row.end);
+            end.setChangedListener(s -> row.end = s);
+            addDrawableChild(end);
+
+            addDrawableChild(CyclingButtonWidget.<Activity>builder(a -> Text.literal(ConfigOptions.pretty(a.asString())))
+                    .values(Activity.values())
+                    .initially(row.activity)
+                    .omitKeyText()
+                    .build(x + 108, ry, 100, 20, Text.literal("Activity"), (btn, v) -> row.activity = v));
+
+            addDrawableChild(ButtonWidget.builder(Text.literal("X"), b -> {
+                rows.remove(index);
+                clearAndInit();
+            }).dimensions(x + 212, ry, 20, 20).build());
+        }
+
+        int by = y + rows.size() * 22 + 4;
+        ButtonWidget add = ButtonWidget.builder(Text.literal("Add entry"), b -> {
+            rows.add(new Row("06:00", "07:00", Activity.HOME));
+            clearAndInit();
+        }).dimensions(x, by, 100, 20).build();
+        add.active = rows.size() < ConfigOptions.MAX_SCHEDULE_ENTRIES;
+        addDrawableChild(add);
+
+        addDrawableChild(ButtonWidget.builder(Text.literal("Use default"), b -> {
+            customSchedule = false;
+            rows.clear();
+            clearAndInit();
+        }).dimensions(x + 104, by, 100, 20).build());
+    }
 
     @Override
     protected void init() {
@@ -99,11 +186,11 @@ public class CitizenConfigScreen extends Screen {
         int x = width / 2 - FIELD_W / 2;
         switch (tab) {
             case GENERAL -> initGeneral(x, 50);
-            case PLACES -> {}
-            case SCHEDULE -> {}
-            case PERSONALITY -> {}
-            case SOCIAL -> {}
-            case LIFE -> {}
+            case PLACES -> initPlaces(x, 50);
+            case SCHEDULE -> initSchedule(x, 70);
+            case PERSONALITY -> initPersonality(x, 50);
+            case SOCIAL -> initPlanned(x, 52, ConfigOptions.Tab.SOCIAL);
+            case LIFE -> initPlanned(x, 52, ConfigOptions.Tab.LIFE);
             case STATUS -> {}
         }
 
@@ -212,8 +299,27 @@ public class CitizenConfigScreen extends Screen {
 
         for (LabelAt l : labels) ctx.drawTextWithShadow(textRenderer, l.text(), l.x(), l.y(), GRAY);
 
-        if (tab == ConfigOptions.Tab.PERSONALITY || tab == ConfigOptions.Tab.SOCIAL || tab == ConfigOptions.Tab.LIFE) {
-            drawWrapped(ctx, "Planned: saved, but doesn't affect citizens yet.", x, 34, FIELD_W, 0xFFC857);
+        if (tab == ConfigOptions.Tab.PERSONALITY) {
+            String blurb = personality.isEmpty() ? "No personality set."
+                    : ConfigOptions.PERSONALITY_BLURBS.getOrDefault(personality, "");
+            drawWrapped(ctx, blurb, x, 80, FIELD_W, GRAY);
+        }
+
+        if (tab == ConfigOptions.Tab.SCHEDULE) {
+            drawWrapped(ctx, customSchedule
+                            ? "24-hour clock, day starts at 06:00. Entries can't cross midnight, so split them."
+                            : "Using the default schedule. Customize to edit it for this citizen only.",
+                    x, 34, FIELD_W, GRAY);
+        }
+
+        if (tab == ConfigOptions.Tab.STATUS) {
+            int y = drawWrapped(ctx, name, x, 40, FIELD_W, 0xFFFFFF);
+            y = drawWrapped(ctx, context.status(), x, y + 6, FIELD_W, GRAY);
+            drawWrapped(ctx, "Snapshot from when this screen opened. Close and reopen to refresh.", x, y + 10, FIELD_W, 0x808080);
+        }
+
+        if (tab == ConfigOptions.Tab.PLACES) {
+            drawWrapped(ctx, "Places are created in the world with /townsfolk place add.", x, 108, FIELD_W, GRAY);
         }
 
         ctx.drawCenteredTextWithShadow(textRenderer, footer, width / 2, height - 42, footerColor);

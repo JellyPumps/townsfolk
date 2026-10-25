@@ -70,7 +70,7 @@ public class Citizen {
     void applyConfig(CitizenConfigData d) {
         this.name = d.name();
         this.skin_id = d.skin();
-        this.age_group = d.ageGroup();
+        this.age_group = d.age_group();
         this.personality = d.personality();
         this.home_id = d.home_id().orElse(null);
         this.work_id = d.work_id().orElse(null);
