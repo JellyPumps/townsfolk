@@ -71,6 +71,11 @@ public class CitizenManager extends PersistentState {
         return null;
     }
 
+    public void applyConfig(Citizen citizen, CitizenConfigData data) {
+        citizen.applyConfig(data);
+        markDirty();
+    }
+
     public void assignHome(Citizen c, @Nullable String place_id) {
         c.setHomeId(place_id);
         markDirty();
